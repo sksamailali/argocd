@@ -1,0 +1,57 @@
+Prerequisites:
+
+An active Amazon EKS cluster.
+kubectl installed on your local machine.
+Installation Steps:
+
+1. Install Argo CD CLI:
+bash
+Copy code
+brew install argocd
+2. Deploy Argo CD to EKS:
+Run the following commands to deploy Argo CD to your EKS cluster:
+
+bash
+Copy code
+# Install Argo CD using the official Helm chart
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Wait for all Argo CD pods to be running
+kubectl wait --for=condition=available deployment -n argocd --all --timeout=300s
+3. Expose Argo CD Web UI:
+By default, the Argo CD web UI is not exposed externally. To access it, you can use a NodePort service or create an Ingress resource. Here is an example using NodePort:
+
+bash
+Copy code
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "NodePort"}}'
+Now, get the NodePort assigned to the Argo CD server:
+
+bash
+Copy code
+export ARGOCD_SERVER_NODE_PORT=$(kubectl get svc argocd-server -n argocd -o=jsonpath='{.spec.ports[0].nodePort}')
+export EKS_CLUSTER_NAME=<your-eks-cluster-name>
+export EKS_CLUSTER_REGION=<your-eks-cluster-region>
+
+# Get the external IP of one of your EKS nodes
+export NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
+
+# Access Argo CD UI using the NodePort and external IP
+echo "Argo CD URL: http://${NODE_IP}:${ARGOCD_SERVER_NODE_PORT}"
+4. Access Argo CD Web UI:
+Open the provided URL in your browser. The default login credentials are:
+
+Username: admin
+Password: Retrieve the password using the following command:
+bash
+Copy code
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+5. Clean Up (Optional):
+If you want to uninstall Argo CD, you can run the following commands:
+
+bash
+Copy code
+kubectl delete -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+This will delete the Argo CD resources, but keep in mind that it won't delete the namespace.
+
+These instructions are based on the official Argo CD documentation. Please check the Argo CD installation documentation for any updates or changes.
